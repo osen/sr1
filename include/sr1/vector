@@ -1,0 +1,246 @@
+#ifndef STD_SR1_VECTOR
+#define STD_SR1_VECTOR
+
+#include <vector>
+#include <iostream>
+
+#include <stdlib.h>
+
+namespace std
+{
+
+namespace sr1
+{
+
+template <typename T>
+class vector
+{
+  std::vector<T> data;
+  size_t refs;
+
+  void check_valid()
+  {
+    if(refs > 0)
+    {
+      std::cout << "Refs: " << refs << std::endl;
+      abort();
+    }
+  }
+
+public:
+  vector() : refs(0) { }
+
+  ~vector()
+  {
+    check_valid();
+  }
+
+  vector& operator=(vector const& other)
+  {
+    check_valid();
+    data = other.data;
+
+    return *this;
+  }
+
+  void push_back(T val)
+  {
+    check_valid();
+    data.push_back(val);
+  }
+
+  void clear()
+  {
+    check_valid();
+    data.clear();
+  }
+
+  size_t size()
+  {
+    return data.size();
+  }
+
+/*
+  class vector_lock
+  {
+    friend class vector;
+
+    vector* owner;
+    size_t idx;
+
+    vector_lock(vector* owner, size_t idx)
+    {
+      this->owner = owner;
+      this->idx = idx;
+    }
+
+  public:
+    operator T&()
+    {
+      return owner->data.at(idx);
+    }
+
+    //T& operator *()
+    //{
+    //  return owner->data.at(idx);
+    //}
+  };
+
+  vector_lock at(size_t idx)
+  {
+    return vector_lock(this, idx);
+  }
+*/
+
+  class iterator
+  {
+    friend class vector;
+
+    typename std::vector<T>::iterator it;
+    vector<T>* parent;
+
+    void check_parent() const
+    {
+      if(!parent)
+      {
+        std::cout << "Invalid parent" << std::endl;
+        abort();
+      }
+    }
+
+    void check_valid() const
+    {
+      check_parent();
+
+      if(it == parent->data.end())
+      {
+        std::cout << "Invalid iterator" << std::endl;
+        abort();
+      }
+    }
+
+  public:
+    iterator() : parent(NULL) { }
+
+    iterator(iterator const& other) : parent(NULL)
+    {
+      *this = other;
+    }
+
+    ~iterator()
+    {
+      if(parent)
+      {
+        parent->refs--;
+      }
+    }
+
+    iterator& operator=(iterator const& other)
+    {
+      if(parent)
+      {
+        parent->refs--;
+      }
+
+      it = other.it;
+      parent = other.parent;
+
+      if(parent)
+      {
+        parent->refs++;
+      }
+
+      return *this;
+    }
+
+    bool operator !=(iterator const& other)
+    {
+      check_parent();
+      other.check_parent();
+
+      if(it != other.it) return true;
+      if(parent != other.parent) return true;
+
+      return false;
+    }
+
+    iterator operator ++(int val)
+    {
+      check_valid();
+      iterator rtn = *this;
+      it ++;
+
+      return rtn;
+    }
+
+    iterator operator +(int val)
+    {
+      iterator rtn = *this;
+
+      while(val)
+      {
+        val--;
+        rtn++;
+      }
+
+      return rtn;
+    }
+
+    T* operator ->()
+    {
+      check_valid();
+      return &(*it);
+    }
+
+    T& operator *()
+    {
+      check_valid();
+      return *it;
+    }
+  };
+
+  iterator begin()
+  {
+    iterator rtn;
+
+    rtn.it = data.begin();
+    rtn.parent = this;
+    refs++;
+
+    return rtn;
+  }
+
+  iterator end()
+  {
+    iterator rtn;
+
+    rtn.it = data.end();
+    rtn.parent = this;
+    refs++;
+
+    return rtn;
+  }
+
+  iterator erase(iterator& it)
+  {
+    it.check_valid();
+
+    it.parent = NULL;
+
+    refs--;
+    check_valid();
+
+    iterator rtn;
+    rtn.it = data.erase(it.it);
+    rtn.parent = this;
+    refs++;
+
+    return rtn;
+  }
+};
+
+}
+
+}
+
+#endif

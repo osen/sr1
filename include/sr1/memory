@@ -1,0 +1,168 @@
+#ifndef STD_SR1_MEMORY
+#define STD_SR1_MEMORY
+
+#include <memory>
+#include <iostream>
+
+namespace std
+{
+
+namespace sr1
+{
+
+template <typename T>
+class shared_ptr
+{
+public: // TODO: make_shared friend class?
+  std::shared_ptr<T> data;
+  size_t refs;
+
+  void check_valid()
+  {
+    if(refs != 0)
+    {
+      std::cout << "Calling abort" << std::endl;
+      abort();
+    }
+  }
+
+public:
+  shared_ptr() : refs(0) { }
+
+  ~shared_ptr()
+  {
+    check_valid();
+  }
+
+  shared_ptr(const shared_ptr& other) : refs(0)
+  {
+    *this = other;
+  }
+
+  void reset()
+  {
+    check_valid();
+    data.reset();
+  }
+
+  shared_ptr& operator=(const shared_ptr& other)
+  {
+    check_valid();
+    data = other.data;
+
+    return *this;
+  }
+
+/*
+  shared_ptr& operator=(const std::shared_ptr<T>& other)
+  {
+    check_valid();
+    data = other;
+
+    return *this;
+  }
+*/
+
+  class shared_ptr_lock
+  {
+  protected:
+    shared_ptr* owner;
+    std::weak_ptr<T> data;
+
+  public:
+    shared_ptr_lock(shared_ptr* owner, std::shared_ptr<T> data)
+    {
+      this->owner = owner;
+      this->data = data;
+      owner->refs++;
+    }
+
+    shared_ptr_lock(const shared_ptr_lock& other)
+    {
+      *this = other;
+    }
+
+    shared_ptr_lock& operator=(const shared_ptr_lock& other)
+    {
+      owner = other.owner;
+      data = other.data;
+      owner->refs++;
+
+      return *this;
+    }
+
+    ~shared_ptr_lock()
+    {
+      owner->refs--;
+    }
+  };
+
+  class shared_ptr_lock_ptr : public shared_ptr_lock
+  {
+  public:
+    shared_ptr_lock_ptr(shared_ptr* owner, std::shared_ptr<T> data) : shared_ptr_lock(owner, data) { }
+
+    operator T*()
+    {
+      return data.lock().get();
+    }
+
+    T& operator*()
+    {
+      return *data.lock();
+    }
+
+    T* operator->()
+    {
+      return data.lock().get();
+    }
+  };
+
+  class shared_ptr_lock_ref : public shared_ptr_lock
+  {
+  public:
+    shared_ptr_lock_ref(shared_ptr* owner, std::shared_ptr<T> data) : shared_ptr_lock(owner, data) { }
+
+    operator T&()
+    {
+      return *data.lock();
+    }
+  };
+
+  shared_ptr_lock_ptr operator->()
+  {
+    return shared_ptr_lock_ptr(this, data);
+  }
+
+  shared_ptr_lock_ptr get()
+  {
+    return shared_ptr_lock_ptr(this, data);
+  }
+
+  shared_ptr_lock_ref operator*()
+  {
+    return shared_ptr_lock_ref(this, data);
+  }
+};
+
+template <typename T, typename A>
+shared_ptr<T> make_shared(A& a)
+{
+  shared_ptr<T> rtn;
+
+  rtn.data = std::make_shared<T>(a);
+  //rtn.reset(new T(a));
+
+  return rtn;
+}
+
+/*
+template <typename T>
+class shared_ptr : public std::shared_ptr<T> { };
+*/
+
+}
+
+}
+
+#endif
