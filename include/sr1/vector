@@ -26,7 +26,7 @@ class vector
   {
     if(refs > 0)
     {
-      std::cout << "Attempting to delete active memory" << std::endl;
+      std::cerr << "Attempting to delete active memory" << std::endl;
       abort();
     }
   }
@@ -107,7 +107,7 @@ public:
     {
       if(!parent)
       {
-        std::cout << "Invalid parent" << std::endl;
+        std::cerr << "Invalid parent" << std::endl;
         abort();
       }
     }
@@ -118,7 +118,7 @@ public:
 
       if(it == parent->data.end())
       {
-        std::cout << "Invalid iterator" << std::endl;
+        std::cerr << "Invalid iterator" << std::endl;
         abort();
       }
     }

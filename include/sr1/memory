@@ -25,7 +25,7 @@ public: // TODO: make_shared friend function / class
   {
     if(refs != 0)
     {
-      std::cout << "Attempting to delete active memory" << std::endl;
+      std::cerr << "Attempting to delete active memory" << std::endl;
       abort();
     }
   }

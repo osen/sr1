@@ -7,8 +7,6 @@
 
 #include <iostream>
 
-using std::sr1::vector;
-
 struct Test
 {
   std::sr1::zero_initialized<int> age;
@@ -38,6 +36,11 @@ struct SelfDestroy
   {
     sd.reset();
   }
+
+  SelfDestroy& myself()
+  {
+    return *this;
+  }
 };
 
 void TestSelfDestroy(SelfDestroy& s)
@@ -49,7 +52,7 @@ int main()
 {
   std::cout << "Hello World" << std::endl;
 
-  vector<Test> tests;
+  std::sr1::vector<Test> tests;
   NoCopy nc;
   //NoCopy nc2(nc);
   NoCopy nc3;
@@ -61,6 +64,7 @@ int main()
   //(*sd).wipe(); // NYI
   //sd->wipe();
   //TestSelfDestroy(*sd);
+  //TestSelfDestroy(sd->myself());
 
   for(int i = 0; i < 10; i++)
   {
@@ -70,12 +74,14 @@ int main()
   (*(tests.begin() + 8)).age = 9;
   //tests.end()->age = 9;
 
-  for(vector<Test>::iterator it = tests.begin();
+  for(std::sr1::vector<Test>::iterator it = tests.begin();
     it != tests.end(); it++)
   {
     //tests.clear();
-    std::cout << it->age << std::endl;
+    int age = it->age;
   }
+
+  std::cout << "Goodbye World" << std::endl;
 
   return 0;
 }
