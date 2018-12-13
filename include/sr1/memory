@@ -1,6 +1,8 @@
 #ifndef STD_SR1_MEMORY
 #define STD_SR1_MEMORY
 
+#include "zero_initialized"
+
 #include <memory>
 #include <iostream>
 
@@ -10,39 +12,35 @@ namespace std
 namespace sr1
 {
 
+#ifdef STD_SR1_DEBUG
+
 template <typename T>
 class shared_ptr
 {
-public: // TODO: make_shared friend class?
+public: // TODO: make_shared friend function / class
   std::shared_ptr<T> data;
-  size_t refs;
+  zero_initialized<size_t> refs;
 
   void check_valid()
   {
     if(refs != 0)
     {
-      std::cout << "Calling abort" << std::endl;
+      std::cout << "Attempting to delete active memory" << std::endl;
       abort();
     }
   }
 
 public:
-  shared_ptr() : refs(0) { }
+  shared_ptr() { }
 
   ~shared_ptr()
   {
     check_valid();
   }
 
-  shared_ptr(const shared_ptr& other) : refs(0)
+  shared_ptr(const shared_ptr& other)
   {
     *this = other;
-  }
-
-  void reset()
-  {
-    check_valid();
-    data.reset();
   }
 
   shared_ptr& operator=(const shared_ptr& other)
@@ -53,27 +51,21 @@ public:
     return *this;
   }
 
-/*
-  shared_ptr& operator=(const std::shared_ptr<T>& other)
+  void reset()
   {
     check_valid();
-    data = other;
-
-    return *this;
+    data.reset();
   }
-*/
 
   class shared_ptr_lock
   {
   protected:
-    shared_ptr* owner;
-    std::weak_ptr<T> data;
+    zero_initialized<shared_ptr*> owner;
 
   public:
-    shared_ptr_lock(shared_ptr* owner, std::shared_ptr<T> data)
+    shared_ptr_lock(shared_ptr* owner)
     {
       this->owner = owner;
-      this->data = data;
       owner->refs++;
     }
 
@@ -84,14 +76,18 @@ public:
 
     shared_ptr_lock& operator=(const shared_ptr_lock& other)
     {
+      if(owner)
+      {
+        owner->refs--;
+      }
+
       owner = other.owner;
-      data = other.data;
       owner->refs++;
 
       return *this;
     }
 
-    ~shared_ptr_lock()
+    virtual ~shared_ptr_lock()
     {
       owner->refs--;
     }
@@ -100,69 +96,77 @@ public:
   class shared_ptr_lock_ptr : public shared_ptr_lock
   {
   public:
-    shared_ptr_lock_ptr(shared_ptr* owner, std::shared_ptr<T> data) : shared_ptr_lock(owner, data) { }
+    shared_ptr_lock_ptr(shared_ptr* owner) : shared_ptr_lock(owner) { }
 
     operator T*()
     {
-      return data.lock().get();
+      return this->owner->data.get();
     }
 
     T& operator*()
     {
-      return *data.lock();
+      return *this->owner->data;
     }
 
     T* operator->()
     {
-      return data.lock().get();
+      return this->owner->data.get();
     }
   };
 
   class shared_ptr_lock_ref : public shared_ptr_lock
   {
   public:
-    shared_ptr_lock_ref(shared_ptr* owner, std::shared_ptr<T> data) : shared_ptr_lock(owner, data) { }
+    shared_ptr_lock_ref(shared_ptr* owner) : shared_ptr_lock(owner) { }
 
     operator T&()
     {
-      return *data.lock();
+      return *this->owner->data;
     }
   };
 
   shared_ptr_lock_ptr operator->()
   {
-    return shared_ptr_lock_ptr(this, data);
+    return shared_ptr_lock_ptr(this);
   }
 
   shared_ptr_lock_ptr get()
   {
-    return shared_ptr_lock_ptr(this, data);
+    return shared_ptr_lock_ptr(this);
   }
 
   shared_ptr_lock_ref operator*()
   {
-    return shared_ptr_lock_ref(this, data);
+    return shared_ptr_lock_ref(this);
   }
 };
+
+template <typename T>
+shared_ptr<T> make_shared()
+{
+  shared_ptr<T> rtn;
+  rtn.data = std::make_shared<T>();
+  return rtn;
+}
 
 template <typename T, typename A>
 shared_ptr<T> make_shared(A& a)
 {
   shared_ptr<T> rtn;
-
   rtn.data = std::make_shared<T>(a);
-  //rtn.reset(new T(a));
-
   return rtn;
 }
 
-/*
-template <typename T>
-class shared_ptr : public std::shared_ptr<T> { };
-*/
+#else
+
+using std::shared_ptr;
+using std::make_shared;
+
+#endif
 
 }
 
 }
 
 #endif
+

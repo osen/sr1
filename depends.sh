@@ -14,7 +14,7 @@ OPENLIST=
 # C++ std::vector<T>::add.
 #
 ##############################################################################
-function listadd()
+listadd()
 {
   LIST=
 
@@ -53,7 +53,7 @@ function listadd()
 # like a queue (FIFO).
 #
 ##############################################################################
-function listpop()
+listpop()
 {
   LIST=
 
@@ -97,7 +97,7 @@ function listpop()
 # result.
 #
 ##############################################################################
-function listcontains()
+listcontains()
 {
   LIST=
 
@@ -130,7 +130,7 @@ function listcontains()
 # the last '/'. Uses the "basename" function underneath.
 #
 ##############################################################################
-function filename()
+filename()
 {
   RETURN=`basename "$1" 2>/dev/null`
 }
@@ -146,7 +146,7 @@ function filename()
 # Add each file that has needed processing to the return result.
 #
 ##############################################################################
-function process()
+process()
 {
   RTN=
 
@@ -206,7 +206,7 @@ function process()
 # Based on the specified path, return the path of the corresponding object.
 #
 ##############################################################################
-function findobj()
+findobj()
 {
   OBJ1=`echo "$1" | sed 's/\..*$//'`.obj
 
@@ -230,7 +230,7 @@ function findobj()
 # exists for the specified object, then replace it.
 #
 ##############################################################################
-function substituterule()
+substituterule()
 {
   if [ ! -f "$1" ]; then
     echo $RULE > "$1"
@@ -270,7 +270,7 @@ function substituterule()
 # the dependencies Makefile (or update it if rule already exists).
 #
 ##############################################################################
-function mainfunc()
+mainfunc()
 {
   if [ -z "$1" ]; then
     echo "Error: No output specified"

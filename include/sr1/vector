@@ -1,6 +1,8 @@
 #ifndef STD_SR1_VECTOR
 #define STD_SR1_VECTOR
 
+#include "zero_initialized"
+
 #include <vector>
 #include <iostream>
 
@@ -12,6 +14,8 @@ namespace std
 namespace sr1
 {
 
+#ifdef STD_SR1_DEBUG
+
 template <typename T>
 class vector
 {
@@ -22,7 +26,7 @@ class vector
   {
     if(refs > 0)
     {
-      std::cout << "Refs: " << refs << std::endl;
+      std::cout << "Attempting to delete active memory" << std::endl;
       abort();
     }
   }
@@ -97,7 +101,7 @@ public:
     friend class vector;
 
     typename std::vector<T>::iterator it;
-    vector<T>* parent;
+    zero_initialized<vector<T>*> parent;
 
     void check_parent() const
     {
@@ -108,7 +112,7 @@ public:
       }
     }
 
-    void check_valid() const
+    void check_valid()
     {
       check_parent();
 
@@ -120,9 +124,9 @@ public:
     }
 
   public:
-    iterator() : parent(NULL) { }
+    iterator() { }
 
-    iterator(iterator const& other) : parent(NULL)
+    iterator(iterator const& other)
     {
       *this = other;
     }
@@ -238,6 +242,12 @@ public:
     return rtn;
   }
 };
+
+#else
+
+using std::vector;
+
+#endif
 
 }
 
