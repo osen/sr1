@@ -48,6 +48,12 @@ void TestSelfDestroy(SelfDestroy& s)
   sd.reset();
 }
 
+void clear(Test& t, std::sr1::vector<Test>& ts)
+{
+  ts.clear();
+  std::cout << t.age << std::endl;
+}
+
 int main()
 {
   std::cout << "Hello World" << std::endl;
@@ -80,6 +86,9 @@ int main()
     //tests.clear();
     int age = it->age;
   }
+
+  std::cout << tests.at(8).age << std::endl;
+  //clear(tests.at(8), tests);
 
   std::cout << "Goodbye World" << std::endl;
 

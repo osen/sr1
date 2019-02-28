@@ -31,6 +31,30 @@ class vector
     }
   }
 
+  class vector_lock
+  {
+    friend class vector;
+
+    vector* owner;
+
+    vector_lock() : owner(NULL) {}
+
+    void setOwner(vector* owner)
+    {
+      this->owner = owner;
+      owner->refs++;
+    }
+
+  public:
+    ~vector_lock()
+    {
+      if(owner)
+      {
+        owner->refs--;
+      }
+    }
+  };
+
 public:
   vector() : refs(0) { }
 
@@ -64,37 +88,6 @@ public:
     return data.size();
   }
 
-/*
-  class vector_lock
-  {
-    friend class vector;
-
-    vector* owner;
-    size_t idx;
-
-    vector_lock(vector* owner, size_t idx)
-    {
-      this->owner = owner;
-      this->idx = idx;
-    }
-
-  public:
-    operator T&()
-    {
-      return owner->data.at(idx);
-    }
-
-    //T& operator *()
-    //{
-    //  return owner->data.at(idx);
-    //}
-  };
-
-  vector_lock at(size_t idx)
-  {
-    return vector_lock(this, idx);
-  }
-*/
 
   class iterator
   {
@@ -202,6 +195,12 @@ public:
       return *it;
     }
   };
+
+  T& at(size_t idx, vector_lock vl = vector_lock())
+  {
+    vl.setOwner(this);
+    return data.at(idx);
+  }
 
   iterator begin()
   {
