@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.6)
 project(SR1)
 
-#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c89 -pedantic -Wall")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x -pedantic -Wall")
 
 add_definitions(-DSTD_SR1_DEBUG)
 
@@ -17,6 +17,9 @@ add_test(dangling_ref harness ./dangling_ref)
 
 add_executable(dangling_ref_vector src/tests/dangling_ref_vector.cpp)
 add_test(dangling_ref_vector harness ./dangling_ref_vector)
+
+add_executable(dangling_char_ref src/tests/dangling_char_ref.cpp)
+add_test(dangling_char_ref harness ./dangling_char_ref)
 
 add_executable(shared_copy src/tests/shared_copy.cpp)
 add_test(shared_copy shared_copy)
