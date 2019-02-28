@@ -36,8 +36,14 @@ class vector
     friend class vector;
 
     vector* owner;
+    size_t idx;
 
-    vector_lock() : owner(NULL) {}
+    vector_lock() : owner(NULL), idx(0) {}
+
+    operator size_t()
+    {
+      return idx;
+    }
 
     void setOwner(vector* owner)
     {
@@ -46,6 +52,8 @@ class vector
     }
 
   public:
+    vector_lock(const size_t& other) : owner(NULL), idx(other) {}
+
     ~vector_lock()
     {
       if(owner)
@@ -194,12 +202,30 @@ public:
       check_valid();
       return *it;
     }
+
+    bool operator ==(const iterator& other)
+    {
+      return it == other.it;
+    }
   };
 
   T& at(size_t idx, vector_lock vl = vector_lock())
   {
     vl.setOwner(this);
     return data.at(idx);
+  }
+
+  T& operator [](vector_lock vl)
+  {
+    vl.setOwner(this);
+
+    if(vl >= data.size())
+    {
+      std::cerr << "Attempting to access out of bounds memory" << std::endl;
+      abort();
+    }
+
+    return at(vl);
   }
 
   iterator begin()
