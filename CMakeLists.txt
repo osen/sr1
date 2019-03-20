@@ -49,5 +49,8 @@ add_test(dangling_ref_vector_raw harness ./dangling_ref_vector_raw)
 add_executable(shared_copy src/tests/shared_copy.cpp)
 add_test(shared_copy shared_copy)
 
+add_executable(shared_ptr src/tests/shared_ptr.cpp)
+add_test(shared_ptr shared_ptr)
+
 add_executable(iterator_erase src/tests/iterator_erase.cpp)
 add_test(iterator_erase iterator_erase)

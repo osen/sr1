@@ -1,0 +1,151 @@
+#ifndef STD_SR1_SHAREDPTR
+#define STD_SR1_SHAREDPTR
+
+#include "zero_initialized"
+
+#include <cstddef>
+
+namespace std
+{
+
+namespace sr1
+{
+
+struct shared_ptr_refcount
+{
+  shared_ptr_refcount() : ptr(NULL), deleter(NULL) { }
+
+  zero_initialized<size_t> count;
+  void *ptr;
+  void (*deleter)(void *);
+};
+
+template <typename T>
+void shared_ptr_deleter(void *ptr)
+{
+  T *t = (T *)ptr;
+
+  delete t;
+}
+
+template <typename T>
+class shared_ptr
+{
+public:
+  shared_ptr() : ref(NULL) { }
+
+  shared_ptr& operator=(const shared_ptr& other)
+  {
+    aquire(other.ref);
+
+    return *this;
+  }
+
+  shared_ptr(const shared_ptr& copy) : ref(NULL)
+  {
+    *this = copy;
+  }
+
+  template <typename U>
+  shared_ptr& operator=(const shared_ptr<U>& other)
+  {
+    T *t = static_cast<U*>(NULL);
+    aquire(other.ref);
+
+    return *this;
+  }
+
+  template <typename U>
+  shared_ptr(const shared_ptr<U>& copy) : ref(NULL)
+  {
+    *this = copy;
+  }
+
+  ~shared_ptr()
+  {
+    release();
+  }
+
+  T *operator->()
+  {
+    return get();
+  }
+
+  T& operator*()
+  {
+    return *get();
+  }
+
+private:
+  T *get()
+  {
+    T *t = NULL;
+
+    if(ref)
+    {
+      t = (T *)ref->ptr;
+    }
+
+    return t;
+  }
+
+  void release()
+  {
+    if(!ref)
+    {
+      return;
+    }
+
+    ref->count--;
+
+    if(ref->count < 1)
+    {
+      ref->deleter(ref->ptr);
+      delete ref;
+    }
+
+    ref = NULL;
+  }
+
+// TODO: Allow the following to be private
+public:
+  shared_ptr_refcount *ref;
+
+  void aquire(shared_ptr_refcount *ref)
+  {
+    if(ref == this->ref)
+    {
+      return;
+    }
+
+    release();
+
+    if(!ref)
+    {
+      return;
+    }
+
+    this->ref = ref;
+    ref->count++;
+  }
+
+};
+
+template <typename T>
+shared_ptr<T> make_shared()
+{
+  shared_ptr<T> rtn;
+
+  shared_ptr_refcount *ref = new shared_ptr_refcount();
+  ref->ptr = new T();
+  ref->deleter = shared_ptr_deleter<T>;
+  rtn.aquire(ref);
+
+  return rtn;
+}
+
+}
+
+}
+
+#endif
