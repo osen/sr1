@@ -10,7 +10,8 @@ struct Dummy
 
   void broken()
   {
-    d.reset();
+    //d.reset();
+    d = std::sr1::shared_ptr<Dummy>();
     dummy = 9;
   }
 };

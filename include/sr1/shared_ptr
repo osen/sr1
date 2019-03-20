@@ -3,6 +3,8 @@
 
 #include "zero_initialized"
 
+#include <iostream>
+
 #include <cstddef>
 
 namespace std
@@ -10,6 +12,8 @@ namespace std
 
 namespace sr1
 {
+
+#ifdef STD_SR1_DEBUG
 
 struct shared_ptr_refcount
 {
@@ -29,10 +33,91 @@ void shared_ptr_deleter(void *ptr)
 }
 
 template <typename T>
-class shared_ptr
+class shared_ptr;
+
+template <typename T>
+class shared_ptr_lock
 {
 public:
-  shared_ptr() : ref(NULL) { }
+  shared_ptr_lock(shared_ptr<T>* owner) : owner(owner)
+  {
+    // TODO: Initializer list parameter with same name as argument
+    // All compilers support this? C++98
+    this->owner = owner;
+    owner->locks++;
+  }
+
+  shared_ptr_lock(const shared_ptr_lock<T>& other) : owner(NULL)
+  {
+    *this = other;
+  }
+
+  virtual ~shared_ptr_lock()
+  {
+    owner->locks--;
+  }
+
+protected:
+  shared_ptr<T>* owner;
+
+private:
+  shared_ptr_lock& operator=(const shared_ptr_lock& other)
+  {
+    if(owner)
+    {
+      owner->locks--;
+    }
+
+    owner = other.owner;
+    owner->locks++;
+
+    return *this;
+  }
+
+};
+
+template <typename T>
+class shared_ptr_lock_ptr : public shared_ptr_lock<T>
+{
+public:
+  shared_ptr_lock_ptr(shared_ptr<T> *owner) : shared_ptr_lock<T>(owner) { }
+
+  operator T*()
+  {
+    return this->owner->get();
+  }
+
+  T& operator*()
+  {
+    return *this->owner->get();
+  }
+
+  T* operator->()
+  {
+    return this->owner->get();
+  }
+};
+
+template <typename T>
+class shared_ptr_lock_ref : public shared_ptr_lock<T>
+{
+public:
+  shared_ptr_lock_ref(shared_ptr<T> *owner) : shared_ptr_lock<T>(owner) { }
+
+  operator T&()
+  {
+    return *this->owner->get();
+  }
+};
+
+template <typename T>
+class shared_ptr
+{
+  friend class shared_ptr_lock_ptr<T>;
+  friend class shared_ptr_lock_ref<T>;
+
+public:
+  shared_ptr() : ref(NULL), locks(0) { }
 
   shared_ptr& operator=(const shared_ptr& other)
   {
@@ -41,7 +126,7 @@ public:
     return *this;
   }
 
-  shared_ptr(const shared_ptr& copy) : ref(NULL)
+  shared_ptr(const shared_ptr& copy) : ref(NULL), locks(0)
   {
     *this = copy;
   }
@@ -56,24 +141,24 @@ public:
   }
 
   template <typename U>
-  shared_ptr(const shared_ptr<U>& copy) : ref(NULL)
+  shared_ptr(const shared_ptr<U>& copy) : ref(NULL), locks(0)
   {
     *this = copy;
   }
 
   ~shared_ptr()
   {
-    release();
+    reset();
   }
 
-  T *operator->()
+  shared_ptr_lock_ptr<T> operator->()
   {
-    return get();
+    return shared_ptr_lock_ptr<T>(this);
   }
 
-  T& operator*()
+  shared_ptr_lock_ref<T> operator*()
   {
-    return *get();
+    return shared_ptr_lock_ref<T>(this);
   }
 
 private:
@@ -89,11 +174,17 @@ private:
     return t;
   }
 
-  void release()
+  void reset()
   {
     if(!ref)
     {
       return;
+    }
+
+    if(locks)
+    {
+      std::cerr << "Attempt to release locked reference" << std::endl;
+      abort();
     }
 
     ref->count--;
@@ -110,6 +201,7 @@ private:
 // TODO: Allow the following to be private
 public:
   shared_ptr_refcount *ref;
+  size_t locks;
 
   void aquire(shared_ptr_refcount *ref)
   {
@@ -118,7 +210,7 @@ public:
       return;
     }
 
-    release();
+    reset();
 
     if(!ref)
     {
@@ -143,6 +235,13 @@ shared_ptr<T> make_shared()
 
   return rtn;
 }
+
+#else
+
+using std::shared_ptr;
+using std::make_shared;
+
+#endif
 
 }
 

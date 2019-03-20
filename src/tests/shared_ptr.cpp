@@ -32,6 +32,11 @@ struct Dummy : public Object
   std::sr1::zero_initialized<int> dummy;
 };
 
+void test(Dummy& d)
+{
+  d.dummy = 99;
+}
+
 int main()
 {
   std::sr1::shared_ptr<Dummy> d = std::sr1::make_shared<Dummy>();
@@ -46,6 +51,8 @@ int main()
   d2 = d;
   d = d2;
   d3 = d3;
+
+  test(*d);
 
   std::cout << d->dummy << std::endl;
 

@@ -9,7 +9,8 @@ std::sr1::shared_ptr<Dummy> d;
 
 void broken(Dummy& dr)
 {
-  d.reset();
+  //d.reset();
+  d = std::sr1::shared_ptr<Dummy>();
   dr.dummy = 9;
 }
 
