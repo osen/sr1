@@ -19,7 +19,8 @@ struct shared_ptr_refcount
 {
   shared_ptr_refcount() : ptr(NULL), deleter(NULL) { }
 
-  zero_initialized<size_t> count;
+  zero_initialized<size_t> shared;
+  zero_initialized<size_t> weak;
   void *ptr;
   void (*deleter)(void *);
 };
@@ -187,12 +188,17 @@ private:
       abort();
     }
 
-    ref->count--;
+    ref->shared--;
 
-    if(ref->count < 1)
+    if(ref->shared < 1)
     {
       ref->deleter(ref->ptr);
-      delete ref;
+      ref->ptr = NULL;
+
+      if(ref->weak < 1)
+      {
+        delete ref;
+      }
     }
 
     ref = NULL;
@@ -210,6 +216,7 @@ public:
       return;
     }
 
+    // TODO: Increment new reference count before reset of old.
     reset();
 
     if(!ref)
@@ -218,7 +225,7 @@ public:
     }
 
     this->ref = ref;
-    ref->count++;
+    ref->shared++;
   }
 
 };
