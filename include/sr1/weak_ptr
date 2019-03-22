@@ -19,9 +19,12 @@ public:
 
   weak_ptr& operator=(const weak_ptr& other)
   {
-    aquire(other.ref);
+    {
+      MUTEX_LOCK
+      aquire(other.ref);
 
-    return *this;
+      return *this;
+    }
   }
 
   weak_ptr(const weak_ptr& copy) : ref(NULL)
@@ -32,10 +35,13 @@ public:
   template <typename U>
   weak_ptr& operator=(const weak_ptr<U>& other)
   {
-    T *t = static_cast<U*>(NULL);
-    aquire(other.ref);
+    {
+      MUTEX_LOCK
+      T *t = static_cast<U*>(NULL);
+      aquire(other.ref);
 
-    return *this;
+      return *this;
+    }
   }
 
   template <typename U>
@@ -47,10 +53,13 @@ public:
   template <typename U>
   weak_ptr& operator=(const shared_ptr<U>& other)
   {
-    T *t = static_cast<U*>(NULL);
-    aquire(other.ref);
+    {
+      MUTEX_LOCK
+      T *t = static_cast<U*>(NULL);
+      aquire(other.ref);
 
-    return *this;
+      return *this;
+    }
   }
 
   template <typename U>
@@ -59,11 +68,40 @@ public:
     *this = copy;
   }
 
+  ~weak_ptr()
+  {
+    {
+      MUTEX_LOCK
+      reset();
+    }
+  }
+
   long use_count()
   {
-    if(!ref) return 0;
+    {
+      MUTEX_LOCK
+      if(!ref) return 0;
 
-    return ref->shared;
+      return ref->shared;
+    }
+  }
+
+  shared_ptr<T> lock()
+  {
+    {
+      MUTEX_LOCK
+      shared_ptr<T> rtn;
+
+      if(ref)
+      {
+        if(ref->shared)
+        {
+          rtn.aquire(ref, __m);
+        }
+      }
+
+      return rtn;
+    }
   }
 
 private:

@@ -3,6 +3,8 @@
 
 #include "zero_initialized"
 
+#include <pthread.h>
+
 #include <iostream>
 
 #include <cstddef>
@@ -14,6 +16,56 @@ namespace sr1
 {
 
 #ifdef STD_SR1_DEBUG
+
+/*
+#define MUTEX_LOCK \
+  std::cout << "Lock: " << __FILE__ << ":" << __LINE__ << std::endl; \
+  shared_ptr_mutex<> __m;
+*/
+
+#define MUTEX_LOCK \
+  shared_ptr_mutex<> __m;
+
+#define MUTEX_UNLOCK \
+  __m.unlock();
+
+#define MUTEX_RELOCK \
+  __m.lock();
+
+template <typename T = int>
+struct shared_ptr_mutex
+{
+  shared_ptr_mutex()
+  {
+    lock();
+  }
+
+  ~shared_ptr_mutex()
+  {
+    unlock();
+  }
+
+  void unlock()
+  {
+    //std::cout << "Unlock" << std::endl;
+    pthread_mutex_unlock(get());
+  }
+
+  void lock()
+  {
+    pthread_mutex_lock(get());
+    //std::cout << "Lock" << std::endl;
+  }
+
+private:
+  pthread_mutex_t *get()
+  {
+    static pthread_mutex_t rtn = PTHREAD_MUTEX_INITIALIZER;
+    // TODO: Destroy mutex on shutdown
+
+    return &rtn;
+  }
+};
 
 struct shared_ptr_refcount
 {
@@ -44,18 +96,34 @@ public:
   {
     // TODO: Initializer list parameter with same name as argument
     // All compilers support this? C++98
-    this->owner = owner;
-    owner->locks++;
+    {
+      MUTEX_LOCK
+      this->owner = owner;
+      owner->locks++;
+    }
   }
 
   shared_ptr_lock(const shared_ptr_lock<T>& other) : owner(NULL)
   {
-    *this = other;
+    //*this = other;
+    {
+      MUTEX_LOCK
+      if(owner)
+      {
+        owner->locks--;
+      }
+
+      owner = other.owner;
+      owner->locks++;
+    }
   }
 
   virtual ~shared_ptr_lock()
   {
-    owner->locks--;
+    {
+      MUTEX_LOCK
+      owner->locks--;
+    }
   }
 
 protected:
@@ -64,16 +132,25 @@ protected:
 private:
   shared_ptr_lock& operator=(const shared_ptr_lock& other)
   {
-    if(owner)
-    {
-      owner->locks--;
-    }
-
-    owner = other.owner;
-    owner->locks++;
-
+    abort();
     return *this;
   }
+/*
+  {
+    {
+      MUTEX_LOCK
+      if(owner)
+      {
+        owner->locks--;
+      }
+
+      owner = other.owner;
+      owner->locks++;
+
+      return *this;
+    }
+  }
+*/
 
 };
 
@@ -122,9 +199,12 @@ public:
 
   shared_ptr& operator=(const shared_ptr& other)
   {
-    aquire(other.ref);
+    {
+      MUTEX_LOCK
+      aquire(other.ref, __m);
 
-    return *this;
+      return *this;
+    }
   }
 
   shared_ptr(const shared_ptr& copy) : ref(NULL), locks(0)
@@ -135,10 +215,13 @@ public:
   template <typename U>
   shared_ptr& operator=(const shared_ptr<U>& other)
   {
-    T *t = static_cast<U*>(NULL);
-    aquire(other.ref);
+    {
+      MUTEX_LOCK
+      T *t = static_cast<U*>(NULL);
+      aquire(other.ref, __m);
 
-    return *this;
+      return *this;
+    }
   }
 
   template <typename U>
@@ -149,11 +232,15 @@ public:
 
   ~shared_ptr()
   {
-    reset();
+    {
+      MUTEX_LOCK
+      reset(__m);
+    }
   }
 
   shared_ptr_lock_ptr<T> operator->()
   {
+    // TODO: Seems a bit cleaner putting mutex here rather than lock class.
     return shared_ptr_lock_ptr<T>(this);
   }
 
@@ -175,7 +262,7 @@ private:
     return t;
   }
 
-  void reset()
+  void reset(shared_ptr_mutex<>& __m)
   {
     if(!ref)
     {
@@ -188,17 +275,21 @@ private:
       abort();
     }
 
-    ref->shared--;
-
-    if(ref->shared < 1)
+    if(ref->shared == 1)
     {
+      __m.unlock();
       ref->deleter(ref->ptr);
+      __m.lock();
       ref->ptr = NULL;
 
       if(ref->weak < 1)
       {
         delete ref;
       }
+    }
+    else
+    {
+      ref->shared--;
     }
 
     ref = NULL;
@@ -209,23 +300,25 @@ public:
   shared_ptr_refcount *ref;
   size_t locks;
 
-  void aquire(shared_ptr_refcount *ref)
+  void aquire(shared_ptr_refcount *ref, shared_ptr_mutex<>& __m)
   {
-    if(ref == this->ref)
     {
-      return;
+      if(ref == this->ref)
+      {
+        return;
+      }
+
+      // TODO: Increment new reference count before reset of old.
+      reset(__m);
+
+      if(!ref)
+      {
+        return;
+      }
+
+      this->ref = ref;
+      ref->shared++;
     }
-
-    // TODO: Increment new reference count before reset of old.
-    reset();
-
-    if(!ref)
-    {
-      return;
-    }
-
-    this->ref = ref;
-    ref->shared++;
   }
 
 };
@@ -233,12 +326,13 @@ public:
 template <typename T>
 shared_ptr<T> make_shared()
 {
+  MUTEX_LOCK
   shared_ptr<T> rtn;
 
   shared_ptr_refcount *ref = new shared_ptr_refcount();
   ref->ptr = new T();
   ref->deleter = shared_ptr_deleter<T>;
-  rtn.aquire(ref);
+  rtn.aquire(ref, __m);
 
   return rtn;
 }

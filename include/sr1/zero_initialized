@@ -15,7 +15,7 @@ private:
 
 public:
   zero_initialized() : m_data(0) { }
-    
+
   T& operator=(const T& t)
   {
     m_data = t;

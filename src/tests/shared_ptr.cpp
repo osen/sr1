@@ -1,5 +1,4 @@
-#include <sr1/shared_ptr>
-//#include <sr1/memory>
+#include <sr1/memory>
 #include <sr1/vector>
 #include <sr1/zero_initialized>
 #include <iostream>
