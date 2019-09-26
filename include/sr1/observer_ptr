@@ -1,0 +1,218 @@
+#include <memory>
+
+namespace std
+{
+
+namespace sr1
+{
+
+template <typename T>
+struct observer_ptr
+{
+  /*********************************************************
+   * Default Constructor
+   *********************************************************/
+  observer_ptr() { }
+
+  /*********************************************************
+   * Copy Constructor
+   *********************************************************/
+  template <typename R>
+  observer_ptr(const observer_ptr<R>& r)
+  {
+    operator=(r);
+  }
+
+  /*********************************************************
+   * Raw Pointer Constructor
+   *********************************************************/
+  template <typename R>
+  observer_ptr(R* r)
+  {
+    operator=(r);
+  }
+
+  /*********************************************************
+   * Unique Pointer Constructor
+   *********************************************************/
+  template <typename R>
+  observer_ptr(const std::unique_ptr<R>& r)
+  {
+    operator=(r);
+  }
+
+  /*********************************************************
+   * Shared Pointer Constructor
+   *********************************************************/
+  template <typename R>
+  observer_ptr(const std::shared_ptr<R>& r)
+  {
+    operator=(r);
+  }
+
+  /*********************************************************
+   * Weak Pointer Constructor
+   *********************************************************/
+  template <typename R>
+  observer_ptr(const std::weak_ptr<R>& r)
+  {
+    operator=(r);
+  }
+
+  /*********************************************************
+   * =
+   *
+   * Allows for a copy assignment.
+   *********************************************************/
+  template <typename R>
+  observer_ptr& operator=(const observer_ptr<R>& r)
+  {
+    reset(r);
+
+    return *this;
+  }
+
+  /*********************************************************
+   * =
+   *
+   * Allows for assignment of a raw pointer.
+   *********************************************************/
+  template <typename R>
+  observer_ptr& operator=(R* r)
+  {
+    reset(r);
+
+    return *this;
+  }
+
+  /*********************************************************
+   * =
+   *
+   * Allows for assignment of a unique_ptr.
+   *********************************************************/
+  template <typename R>
+  observer_ptr& operator=(const std::unique_ptr<R>& r)
+  {
+    reset(r);
+
+    return *this;
+  }
+
+  /*********************************************************
+   * =
+   *
+   * Allows for assignment of a shared_ptr.
+   *********************************************************/
+  template <typename R>
+  observer_ptr& operator=(const std::shared_ptr<R>& r)
+  {
+    reset(r);
+
+    return *this;
+  }
+
+  /*********************************************************
+   * =
+   *
+   * Allows for assignment of a weak_ptr.
+   *********************************************************/
+  template <typename R>
+  observer_ptr& operator=(const std::weak_ptr<R>& r)
+  {
+    reset(r);
+
+    return *this;
+  }
+
+  /*********************************************************
+   * *
+   *
+   * Allows for dereference [*(*this)].
+   *********************************************************/
+  T& operator*() const
+  {
+    return *ptr.lock();
+  }
+
+  /*********************************************************
+   * ->
+   *
+   * Allows for dereference [(*this)->].
+   *********************************************************/
+  T* operator->() const
+  {
+    return get();
+  }
+
+  template <typename R>
+  void reset(const std::unique_ptr<R>& r)
+  {
+    reset(r.get());
+  }
+
+  template <typename R>
+  void reset(const std::weak_ptr<R>& r)
+  {
+    reset(r.lock());
+  }
+
+  template <typename R>
+  void reset(const std::shared_ptr<R>& r)
+  {
+    reset(r.get());
+  }
+
+  template <typename R>
+  void reset(const observer_ptr<R>& r)
+  {
+    reset(r.get());
+  }
+
+  template <typename R>
+  void reset(R* r)
+  {
+    ptr = std::static_pointer_cast<R>(r->self);
+  }
+
+  /*********************************************************
+   * get
+   *
+   * Provides a way to recover the pointer.
+   *********************************************************/
+  T* get() const
+  {
+    return ptr.lock().get();
+  }
+
+private:
+  template <typename R>
+  friend struct observer_ptr;
+
+  std::weak_ptr<T> ptr;
+
+};
+
+template <typename T>
+struct _enable_observer
+{
+  _enable_observer()
+  {
+    self.reset(this, dummy);
+  }
+
+private:
+  template <typename R>
+  friend struct observer_ptr;
+
+  static void dummy(_enable_observer* ptr) { }
+
+  std::shared_ptr<_enable_observer> self;
+
+};
+
+using enable_observer = _enable_observer<int>;
+
+}
+
+}
+

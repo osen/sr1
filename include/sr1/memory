@@ -3,6 +3,7 @@
 
 #include "shared_ptr"
 #include "weak_ptr"
+#include "observer_ptr"
 
 #endif
 

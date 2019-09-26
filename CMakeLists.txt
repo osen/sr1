@@ -57,3 +57,6 @@ add_test(weak_ptr weak_ptr)
 
 add_executable(iterator_erase src/tests/iterator_erase.cpp)
 add_test(iterator_erase iterator_erase)
+
+add_executable(observer_simple src/tests/observer_simple.cpp)
+add_test(observer_simple ./observer_simple)
