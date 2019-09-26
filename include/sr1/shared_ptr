@@ -50,6 +50,11 @@ public:
     owner->locks++;
   }
 
+  shared_ptr_lock(const shared_ptr_lock& other)
+  {
+    operator=(other);
+  }
+
   virtual ~shared_ptr_lock()
   {
     owner->locks--;
@@ -64,10 +69,6 @@ public:
     return *this;
   }
 
-  shared_ptr_lock(const shared_ptr_lock& other)
-  {
-    *this = other;
-  }
 
 protected:
   zero_initialized<shared_ptr<T> *> owner;
@@ -127,6 +128,11 @@ class shared_ptr
 public:
   shared_ptr() { }
 
+  /*
+   * Default copy constructor or assignment operator needed
+   * or the required aquire is not called. It does not fall back to
+   * the template version.
+   */
   shared_ptr& operator=(const shared_ptr& other)
   {
     aquire(other.ref);
@@ -136,7 +142,7 @@ public:
 
   shared_ptr(const shared_ptr& copy)
   {
-    *this = copy;
+    operator=(copy);
   }
 
   template <typename U>
@@ -151,7 +157,7 @@ public:
   template <typename U>
   shared_ptr(const shared_ptr<U>& copy)
   {
-    *this = copy;
+    operator=(copy);
   }
 
   ~shared_ptr()

@@ -17,6 +17,14 @@ struct observer_ptr
   /*********************************************************
    * Copy Constructor
    *********************************************************/
+  observer_ptr(const observer_ptr& t)
+  {
+    operator=(t);
+  }
+
+  /*********************************************************
+   * Template Copy Constructor
+   *********************************************************/
   template <typename R>
   observer_ptr(const observer_ptr<R>& r)
   {
@@ -63,6 +71,18 @@ struct observer_ptr
    * =
    *
    * Allows for a copy assignment.
+   *********************************************************/
+  observer_ptr& operator=(const observer_ptr<T>& t)
+  {
+    reset(t);
+
+    return *this;
+  }
+
+  /*********************************************************
+   * =
+   *
+   * Allows for a copy assignment of template type.
    *********************************************************/
   template <typename R>
   observer_ptr& operator=(const observer_ptr<R>& r)
