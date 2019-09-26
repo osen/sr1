@@ -26,7 +26,7 @@ public:
 
   weak_ptr(const weak_ptr& copy) : ref(NULL)
   {
-    *this = copy;
+    operator=(copy);
   }
 
   template <typename U>
@@ -41,7 +41,7 @@ public:
   template <typename U>
   weak_ptr(const weak_ptr<U>& copy) : ref(NULL)
   {
-    *this = copy;
+    operator=(copy);
   }
 
   template <typename U>
@@ -87,6 +87,14 @@ public:
   }
 
 private:
+  template <typename R>
+  friend class shared_ptr;
+
+  template <typename R>
+  friend class weak_ptr;
+
+  shared_ptr_refcount *ref;
+
   void reset()
   {
     if(!ref)
@@ -109,26 +117,14 @@ private:
 
   void aquire(shared_ptr_refcount *ref)
   {
-    if(ref == this->ref)
+    if(ref)
     {
-      return;
+      ref->weak++;
     }
 
     reset();
-
-    if(!ref)
-    {
-      return;
-    }
-
     this->ref = ref;
-    ref->weak++;
   }
-
-// TODO: Allow to be private
-public:
-  shared_ptr_refcount *ref;
-
 };
 
 #else

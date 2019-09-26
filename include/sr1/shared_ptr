@@ -69,7 +69,6 @@ public:
     return *this;
   }
 
-
 protected:
   zero_initialized<shared_ptr<T> *> owner;
 
@@ -108,6 +107,7 @@ public:
   {
     return *this->owner->get();
   }
+
 };
 
 template <typename T>
@@ -170,9 +170,9 @@ public:
     return shared_ptr_lock_ptr<T>(const_cast<shared_ptr<T> *>(this));
   }
 
-  shared_ptr_lock_ref<T> operator*()
+  shared_ptr_lock_ref<T> operator*() const
   {
-    return shared_ptr_lock_ref<T>(this);
+    return shared_ptr_lock_ref<T>(const_cast<shared_ptr<T> *>(this));
   }
 
   mutable zero_initialized<shared_ptr_refcount *> ref;
@@ -203,19 +203,18 @@ private:
       abort();
     }
 
-    if(ref->shared == 1)
+    ref->shared--;
+
+    if(ref->shared < 1)
     {
       ref->deleter.data()(ref->ptr);
       ref->ptr = NULL;
+      ref->deleter = NULL;
 
       if(ref->weak < 1)
       {
         delete ref.data();
       }
-    }
-    else
-    {
-      ref->shared--;
     }
 
     ref = NULL;
@@ -223,23 +222,12 @@ private:
 
   void aquire(shared_ptr_refcount *ref)
   {
-    if(ref == this->ref)
-    {
-      return;
-    }
-
     if(ref)
     {
       ref->shared++;
     }
 
     reset();
-
-    if(!ref)
-    {
-      return;
-    }
-
     this->ref = ref;
   }
 
