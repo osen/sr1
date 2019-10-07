@@ -71,7 +71,7 @@ public:
     return ref->shared;
   }
 
-  shared_ptr<T> lock()
+  shared_ptr<T> lock() const
   {
     shared_ptr<T> rtn;
 
@@ -85,15 +85,6 @@ public:
 
     return rtn;
   }
-
-private:
-  template <typename R>
-  friend class shared_ptr;
-
-  template <typename R>
-  friend class weak_ptr;
-
-  shared_ptr_refcount *ref;
 
   void reset()
   {
@@ -114,6 +105,15 @@ private:
 
     ref = NULL;
   }
+
+private:
+  template <typename R>
+  friend class shared_ptr;
+
+  template <typename R>
+  friend class weak_ptr;
+
+  shared_ptr_refcount *ref;
 
   void aquire(shared_ptr_refcount *ref)
   {

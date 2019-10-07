@@ -25,14 +25,14 @@ struct shared_ptr_refcount
 {
   zero_initialized<size_t> shared;
   zero_initialized<size_t> weak;
-  zero_initialized<void *> ptr;
-  zero_initialized<void (*)(void *)> deleter;
+  zero_initialized<void*> ptr;
+  zero_initialized<void (*)(void*)> deleter;
 };
 
 template <typename T>
-void shared_ptr_deleter(void *ptr)
+void shared_ptr_deleter(void* ptr)
 {
-  T *t = static_cast<T *>(ptr);
+  T* t = static_cast<T*>(ptr);
 
   delete t;
 }
@@ -57,20 +57,20 @@ public:
 
   virtual ~shared_ptr_lock()
   {
-    owner->locks--;
+    owner.data()->locks--;
   }
 
   shared_ptr_lock& operator=(const shared_ptr_lock& other)
   {
-    if(owner) owner->locks--;
+    if(owner) owner.data()->locks--;
     owner = other.owner;
-    owner->locks++;
+    owner.data()->locks++;
 
     return *this;
   }
 
 protected:
-  zero_initialized<shared_ptr<T> *> owner;
+  zero_initialized<shared_ptr<T>*> owner;
 
 };
 
@@ -78,21 +78,21 @@ template <typename T>
 class shared_ptr_lock_ptr : public shared_ptr_lock<T>
 {
 public:
-  shared_ptr_lock_ptr(shared_ptr<T> *owner) : shared_ptr_lock<T>(owner) { }
+  shared_ptr_lock_ptr(shared_ptr<T>* owner) : shared_ptr_lock<T>(owner) { }
 
   operator T*()
   {
-    return this->owner->get();
+    return this->owner.data()->get();
   }
 
   T& operator*()
   {
-    return *this->owner->get();
+    return *this->owner.data()->get();
   }
 
   T* operator->()
   {
-    return this->owner->get();
+    return this->owner.data()->get();
   }
 
 };
@@ -101,11 +101,11 @@ template <typename T>
 class shared_ptr_lock_ref : public shared_ptr_lock<T>
 {
 public:
-  shared_ptr_lock_ref(shared_ptr<T> *owner) : shared_ptr_lock<T>(owner) { }
+  shared_ptr_lock_ref(shared_ptr<T>* owner) : shared_ptr_lock<T>(owner) { }
 
   operator T&()
   {
-    return *this->owner->get();
+    return *this->owner.data()->get();
   }
 
 };
@@ -119,12 +119,6 @@ shared_ptr<T> make_shared();
 template <typename T>
 class shared_ptr
 {
-  friend class shared_ptr_lock_ptr<T>;
-  friend class shared_ptr_lock_ref<T>;
-  friend class weak_ptr<T>;
-  friend class shared_ptr_lock<T>;
-  friend shared_ptr<T> make_shared<T>();
-
 public:
   shared_ptr() { }
 
@@ -148,7 +142,7 @@ public:
   template <typename U>
   shared_ptr& operator=(const shared_ptr<U>& other)
   {
-    T *t = static_cast<U*>(NULL);
+    T* t = static_cast<U*>(NULL);
     aquire(other.ref);
 
     return *this;
@@ -167,24 +161,58 @@ public:
 
   shared_ptr_lock_ptr<T> operator->() const
   {
-    return shared_ptr_lock_ptr<T>(const_cast<shared_ptr<T> *>(this));
+    return shared_ptr_lock_ptr<T>(const_cast<shared_ptr<T>*>(this));
   }
 
   shared_ptr_lock_ref<T> operator*() const
   {
-    return shared_ptr_lock_ref<T>(const_cast<shared_ptr<T> *>(this));
+    return shared_ptr_lock_ref<T>(const_cast<shared_ptr<T>*>(this));
   }
 
-  mutable zero_initialized<shared_ptr_refcount *> ref;
+  void reset(T* t, void (*deleter)(T*))
+  {
+    reset();
+
+    shared_ptr_refcount* ref = new shared_ptr_refcount();
+    ref->ptr = t;
+    ref->deleter = shared_ptr_deleter<T>;
+    aquire(ref);
+
+    if(deleter)
+    {
+      ref->deleter = (void (*)(void*))deleter;
+    }
+  }
+
+  //mutable zero_initialized<shared_ptr_refcount*> ref;
 
 private:
-  zero_initialized<size_t> locks;
+  friend class shared_ptr_lock_ptr<T>;
+  friend class shared_ptr_lock_ref<T>;
+  friend class shared_ptr_lock<T>;
 
-  T *get()
+  template <typename R>
+  friend class weak_ptr;
+
+  template <typename R>
+  friend class shared_ptr;
+
+  template <typename R>
+  friend class observer_ptr;
+
+  friend shared_ptr<T> make_shared<T>();
+
+  template <typename U, typename R>
+  friend shared_ptr<U> static_pointer_cast(const shared_ptr<R>& r);
+
+  zero_initialized<size_t> locks;
+  zero_initialized<shared_ptr_refcount*> ref;
+
+  T* get()
   {
     if(ref)
     {
-      return static_cast<T *>(ref->ptr.data());
+      return static_cast<T*>(ref.data()->ptr.data());
     }
 
     return NULL;
@@ -203,15 +231,15 @@ private:
       abort();
     }
 
-    ref->shared--;
+    ref.data()->shared--;
 
-    if(ref->shared < 1)
+    if(ref.data()->shared < 1)
     {
-      ref->deleter.data()(ref->ptr);
-      ref->ptr = NULL;
-      ref->deleter = NULL;
+      ref.data()->deleter.data()(ref.data()->ptr);
+      ref.data()->ptr = NULL;
+      ref.data()->deleter = NULL;
 
-      if(ref->weak < 1)
+      if(ref.data()->weak < 1)
       {
         delete ref.data();
       }
@@ -220,7 +248,7 @@ private:
     ref = NULL;
   }
 
-  void aquire(shared_ptr_refcount *ref)
+  void aquire(shared_ptr_refcount* ref)
   {
     if(ref)
     {
@@ -238,10 +266,20 @@ shared_ptr<T> make_shared()
 {
   shared_ptr<T> rtn;
 
-  shared_ptr_refcount *ref = new shared_ptr_refcount();
+  shared_ptr_refcount* ref = new shared_ptr_refcount();
   ref->ptr = new T();
   ref->deleter = shared_ptr_deleter<T>;
   rtn.aquire(ref);
+
+  return rtn;
+}
+
+template <typename T, typename R>
+shared_ptr<T> static_pointer_cast(const shared_ptr<R>& r)
+{
+  shared_ptr<T> rtn;
+
+  rtn.aquire(r.ref);
 
   return rtn;
 }

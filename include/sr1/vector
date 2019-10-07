@@ -2,6 +2,7 @@
 #define STD_SR1_VECTOR
 
 #include "zero_initialized"
+#include "observer_ptr"
 
 #include <vector>
 #include <iostream>
@@ -17,7 +18,7 @@ namespace sr1
 #ifdef STD_SR1_DEBUG
 
 template <typename T>
-class vector
+class vector : public enable_observer
 {
   std::vector<T> data;
   size_t refs;
@@ -102,7 +103,7 @@ public:
     friend class vector;
 
     typename std::vector<T>::iterator it;
-    zero_initialized<vector<T> *> parent;
+    observer_ptr<vector<T> > parent;
 
     void check_parent() const
     {
@@ -158,7 +159,7 @@ public:
       return *this;
     }
 
-    bool operator !=(iterator const& other)
+    bool operator!=(iterator const& other)
     {
       check_parent();
       other.check_parent();
@@ -169,7 +170,7 @@ public:
       return false;
     }
 
-    iterator operator ++(int val)
+    iterator operator++(int val)
     {
       check_valid();
       iterator rtn = *this;
@@ -178,7 +179,7 @@ public:
       return rtn;
     }
 
-    iterator operator +(int val)
+    iterator operator+(int val)
     {
       iterator rtn = *this;
 
@@ -191,19 +192,19 @@ public:
       return rtn;
     }
 
-    T* operator ->()
+    T* operator->()
     {
       check_valid();
       return &(*it);
     }
 
-    T& operator *()
+    T& operator*()
     {
       check_valid();
       return *it;
     }
 
-    bool operator ==(const iterator& other)
+    bool operator==(const iterator& other)
     {
       return it == other.it;
     }
@@ -215,7 +216,7 @@ public:
     return data.at(idx);
   }
 
-  T& operator [](vector_lock vl)
+  T& operator[](vector_lock vl)
   {
     vl.setOwner(this);
 
@@ -254,7 +255,7 @@ public:
   {
     it.check_valid();
 
-    it.parent = NULL;
+    it.parent.reset();
 
     refs--;
     check_valid();

@@ -10,8 +10,8 @@ namespace sr1
 class noncopyable
 {
 private:
-  noncopyable(noncopyable const&);
-  noncopyable& operator=(noncopyable const&);
+  noncopyable(const noncopyable&);
+  noncopyable& operator=(const noncopyable&);
 
 public:
   noncopyable() {}
