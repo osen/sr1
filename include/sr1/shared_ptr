@@ -25,6 +25,7 @@ struct shared_ptr_refcount
 {
   zero_initialized<size_t> shared;
   zero_initialized<size_t> weak;
+  zero_initialized<size_t> lock;
   zero_initialized<void*> ptr;
   zero_initialized<void (*)(void*)> deleter;
 };
@@ -80,16 +81,33 @@ class shared_ptr_lock_ptr : public shared_ptr_lock<T>
 public:
   shared_ptr_lock_ptr(shared_ptr<T>* owner) : shared_ptr_lock<T>(owner) { }
 
-  operator T*()
-  {
-    return this->owner.data()->get();
-  }
+  /*********************************************************
+   * T*
+   *
+   * Allows for accessing as a pointer [setPtr(var)].
+   * Disabled in order to discourage raw pointer use.
+   *********************************************************/
+  //operator T*()
+  //{
+  //  return this->owner.data()->get();
+  //}
 
+  /*********************************************************
+   * *
+   *
+   * Allows for dereference [*var].
+   *********************************************************/
   T& operator*()
   {
     return *this->owner.data()->get();
   }
 
+  /*********************************************************
+   * ->
+   *
+   * Allows for dereference [var->]. Including drill-down.
+   * No need for var->->member;
+   *********************************************************/
   T* operator->()
   {
     return this->owner.data()->get();
@@ -103,6 +121,11 @@ class shared_ptr_lock_ref : public shared_ptr_lock<T>
 public:
   shared_ptr_lock_ref(shared_ptr<T>* owner) : shared_ptr_lock<T>(owner) { }
 
+  /*********************************************************
+   * T*
+   *
+   * Allows for accessing as a reference [populateRef(var)].
+   *********************************************************/
   operator T&()
   {
     return *this->owner.data()->get();
@@ -114,7 +137,16 @@ template <typename T>
 class weak_ptr;
 
 template <typename T>
+class observer_ptr;
+
+template <typename T>
+class _enable_observer;
+
+template <typename T>
 shared_ptr<T> make_shared();
+
+template <typename T, typename U>
+shared_ptr<T> static_pointer_cast(const shared_ptr<U>& u);
 
 template <typename T>
 class shared_ptr
@@ -122,30 +154,9 @@ class shared_ptr
 public:
   shared_ptr() { }
 
-  /*
-   * Default copy constructor or assignment operator needed
-   * or the required aquire is not called. It does not fall back to
-   * the template version.
-   */
-  shared_ptr& operator=(const shared_ptr& other)
-  {
-    aquire(other.ref);
-
-    return *this;
-  }
-
   shared_ptr(const shared_ptr& copy)
   {
     operator=(copy);
-  }
-
-  template <typename U>
-  shared_ptr& operator=(const shared_ptr<U>& other)
-  {
-    T* t = static_cast<U*>(NULL);
-    aquire(other.ref);
-
-    return *this;
   }
 
   template <typename U>
@@ -159,6 +170,27 @@ public:
     reset();
   }
 
+  /*
+   * Default copy constructor or assignment operator needed
+   * or the required aquire is not called. It does not fall back to
+   * the template version.
+   */
+  shared_ptr& operator=(const shared_ptr& other)
+  {
+    aquire(other.ref);
+
+    return *this;
+  }
+
+  template <typename U>
+  shared_ptr& operator=(const shared_ptr<U>& other)
+  {
+    T* t = static_cast<U*>(NULL);
+    aquire(other.ref);
+
+    return *this;
+  }
+
   shared_ptr_lock_ptr<T> operator->() const
   {
     return shared_ptr_lock_ptr<T>(const_cast<shared_ptr<T>*>(this));
@@ -169,21 +201,6 @@ public:
     return shared_ptr_lock_ref<T>(const_cast<shared_ptr<T>*>(this));
   }
 
-  void reset(T* t, void (*deleter)(T*))
-  {
-    reset();
-
-    shared_ptr_refcount* ref = new shared_ptr_refcount();
-    ref->ptr = t;
-    ref->deleter = shared_ptr_deleter<T>;
-    aquire(ref);
-
-    if(deleter)
-    {
-      ref->deleter = (void (*)(void*))deleter;
-    }
-  }
-
   //mutable zero_initialized<shared_ptr_refcount*> ref;
 
 private:
@@ -191,24 +208,28 @@ private:
   friend class shared_ptr_lock_ref<T>;
   friend class shared_ptr_lock<T>;
 
-  template <typename R>
+  template <typename U>
   friend class weak_ptr;
 
-  template <typename R>
+  template <typename U>
   friend class shared_ptr;
 
-  template <typename R>
+  template <typename U>
   friend class observer_ptr;
 
-  friend shared_ptr<T> make_shared<T>();
+  template <typename U>
+  friend class _enable_observer;
 
-  template <typename U, typename R>
-  friend shared_ptr<U> static_pointer_cast(const shared_ptr<R>& r);
+  template <typename U>
+  friend shared_ptr<U> make_shared();
+
+  template <typename U, typename V>
+  friend shared_ptr<U> static_pointer_cast(const shared_ptr<V>& v);
 
   zero_initialized<size_t> locks;
   zero_initialized<shared_ptr_refcount*> ref;
 
-  T* get()
+  T* get() const
   {
     if(ref)
     {
@@ -248,6 +269,16 @@ private:
     ref = NULL;
   }
 
+  void reset(T* t, void (*deleter)(T*))
+  {
+    reset();
+
+    shared_ptr_refcount* ref = new shared_ptr_refcount();
+    ref->ptr = t;
+    ref->deleter = (void (*)(void*))deleter;
+    aquire(ref);
+  }
+
   void aquire(shared_ptr_refcount* ref)
   {
     if(ref)
@@ -266,20 +297,17 @@ shared_ptr<T> make_shared()
 {
   shared_ptr<T> rtn;
 
-  shared_ptr_refcount* ref = new shared_ptr_refcount();
-  ref->ptr = new T();
-  ref->deleter = shared_ptr_deleter<T>;
-  rtn.aquire(ref);
+  rtn.reset(new T(), (void (*)(T*))shared_ptr_deleter<T>);
 
   return rtn;
 }
 
-template <typename T, typename R>
-shared_ptr<T> static_pointer_cast(const shared_ptr<R>& r)
+template <typename T, typename U>
+shared_ptr<T> static_pointer_cast(const shared_ptr<U>& u)
 {
   shared_ptr<T> rtn;
 
-  rtn.aquire(r.ref);
+  rtn.aquire(u.ref);
 
   return rtn;
 }

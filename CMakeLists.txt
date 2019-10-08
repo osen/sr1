@@ -44,6 +44,9 @@ add_test(vector_oob harness ./vector_oob)
 add_executable(dangling_ref_vector_raw src/tests/dangling_ref_vector_raw.cpp)
 add_test(dangling_ref_vector_raw harness ./dangling_ref_vector_raw)
 
+add_executable(dangling_observer src/tests/dangling_observer.cpp)
+add_test(dangling_observer harness ./dangling_observer)
+
 # Must succeed #####################################
 
 add_executable(shared_copy src/tests/shared_copy.cpp)
@@ -60,3 +63,4 @@ add_test(iterator_erase iterator_erase)
 
 add_executable(observer_simple src/tests/observer_simple.cpp)
 add_test(observer_simple ./observer_simple)
+
