@@ -113,6 +113,9 @@ private:
   template <typename R>
   friend class weak_ptr;
 
+  template <typename U>
+  friend struct observer_ptr;
+
   shared_ptr_refcount *ref;
 
   void aquire(shared_ptr_refcount *ref)

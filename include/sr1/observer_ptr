@@ -175,13 +175,8 @@ struct observer_ptr
    *********************************************************/
   shared_ptr_lock_ptr<T> operator->() const
   {
-    // TODO: Move lock variable to reference count structure.
-    // Or use dynamic_pointer_cast<T>.
-
-    shared_ptr<_enable_observer<int> >* ptr = &get()->self;
-    shared_ptr_lock_ptr<T> rtn((shared_ptr<T>*)ptr);
-
-    return rtn;
+    //return shared_ptr_lock_ptr<T>(ptr.lock().ref);
+    return shared_ptr_lock_ptr<T>(ptr.ref);
   }
 
   //shared_ptr<T> operator->() const

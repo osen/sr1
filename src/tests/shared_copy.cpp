@@ -7,7 +7,7 @@ struct Dummy
 
 std::sr1::shared_ptr<Dummy> d;
 
-void somefunc(Dummy& dr)
+void somefunc(Dummy& unused)
 {
   std::sr1::shared_ptr<Dummy> dc(d);
 }

@@ -45,10 +45,10 @@ template <typename T>
 class shared_ptr_lock
 {
 public:
-  shared_ptr_lock(shared_ptr<T>* owner)
+  shared_ptr_lock(shared_ptr_refcount* ref)
   {
-    this->owner = owner;
-    owner->locks++;
+    this->ref = ref;
+    ref->lock++;
   }
 
   shared_ptr_lock(const shared_ptr_lock& other)
@@ -58,20 +58,20 @@ public:
 
   virtual ~shared_ptr_lock()
   {
-    owner.data()->locks--;
+    ref.data()->lock--;
   }
 
   shared_ptr_lock& operator=(const shared_ptr_lock& other)
   {
-    if(owner) owner.data()->locks--;
-    owner = other.owner;
-    owner.data()->locks++;
+    if(ref) ref.data()->lock--;
+    ref = other.ref;
+    ref.data()->lock++;
 
     return *this;
   }
 
 protected:
-  zero_initialized<shared_ptr<T>*> owner;
+  zero_initialized<shared_ptr_refcount*> ref;
 
 };
 
@@ -79,7 +79,7 @@ template <typename T>
 class shared_ptr_lock_ptr : public shared_ptr_lock<T>
 {
 public:
-  shared_ptr_lock_ptr(shared_ptr<T>* owner) : shared_ptr_lock<T>(owner) { }
+  shared_ptr_lock_ptr(shared_ptr_refcount* ref) : shared_ptr_lock<T>(ref) { }
 
   /*********************************************************
    * T*
@@ -89,7 +89,7 @@ public:
    *********************************************************/
   //operator T*()
   //{
-  //  return this->owner.data()->get();
+  //  return static_cast<T*>(this->ref.data()->ptr.data());
   //}
 
   /*********************************************************
@@ -99,7 +99,9 @@ public:
    *********************************************************/
   T& operator*()
   {
-    return *this->owner.data()->get();
+    // TODO: ref.data()... should be enough. However the
+    // compiler has issue with this->ref.data()...
+    return *static_cast<T*>(this->ref.data()->ptr.data());
   }
 
   /*********************************************************
@@ -110,7 +112,7 @@ public:
    *********************************************************/
   T* operator->()
   {
-    return this->owner.data()->get();
+    return static_cast<T*>(this->ref.data()->ptr.data());
   }
 
 };
@@ -119,7 +121,7 @@ template <typename T>
 class shared_ptr_lock_ref : public shared_ptr_lock<T>
 {
 public:
-  shared_ptr_lock_ref(shared_ptr<T>* owner) : shared_ptr_lock<T>(owner) { }
+  shared_ptr_lock_ref(shared_ptr_refcount* ref) : shared_ptr_lock<T>(ref) { }
 
   /*********************************************************
    * T*
@@ -128,7 +130,7 @@ public:
    *********************************************************/
   operator T&()
   {
-    return *this->owner.data()->get();
+    return *static_cast<T*>(this->ref.data()->ptr.data());
   }
 
 };
@@ -193,12 +195,14 @@ public:
 
   shared_ptr_lock_ptr<T> operator->() const
   {
-    return shared_ptr_lock_ptr<T>(const_cast<shared_ptr<T>*>(this));
+    //return shared_ptr_lock_ptr<T>(const_cast<shared_ptr_refcount*>(ref));
+    return shared_ptr_lock_ptr<T>(ref);
   }
 
   shared_ptr_lock_ref<T> operator*() const
   {
-    return shared_ptr_lock_ref<T>(const_cast<shared_ptr<T>*>(this));
+    //return shared_ptr_lock_ref<T>(const_cast<shared_ptr_refcount*>(ref));
+    return shared_ptr_lock_ref<T>(ref);
   }
 
   //mutable zero_initialized<shared_ptr_refcount*> ref;
@@ -226,7 +230,6 @@ private:
   template <typename U, typename V>
   friend shared_ptr<U> static_pointer_cast(const shared_ptr<V>& v);
 
-  zero_initialized<size_t> locks;
   zero_initialized<shared_ptr_refcount*> ref;
 
   T* get() const
@@ -246,16 +249,16 @@ private:
       return;
     }
 
-    if(locks)
-    {
-      std::cerr << "Attempt to release locked reference" << std::endl;
-      abort();
-    }
-
     ref.data()->shared--;
 
     if(ref.data()->shared < 1)
     {
+      if(ref.data()->lock)
+      {
+        std::cerr << "Attempt to release locked reference" << std::endl;
+        abort();
+      }
+
       ref.data()->deleter.data()(ref.data()->ptr);
       ref.data()->ptr = NULL;
       ref.data()->deleter = NULL;

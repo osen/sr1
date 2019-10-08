@@ -47,6 +47,9 @@ add_test(dangling_ref_vector_raw harness ./dangling_ref_vector_raw)
 add_executable(dangling_observer src/tests/dangling_observer.cpp)
 add_test(dangling_observer harness ./dangling_observer)
 
+add_executable(expired_observer src/tests/expired_observer.cpp)
+add_test(expired_observer harness ./expired_observer)
+
 # Must succeed #####################################
 
 add_executable(shared_copy src/tests/shared_copy.cpp)
