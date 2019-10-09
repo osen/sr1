@@ -41,6 +41,12 @@ add_test(dangling_this_vector harness ./dangling_this_vector)
 add_executable(vector_oob src/tests/vector_oob.cpp)
 add_test(vector_oob harness ./vector_oob)
 
+add_executable(vector_resize src/tests/vector_resize.cpp)
+add_test(vector_resize harness ./vector_resize)
+
+add_executable(vector_lock src/tests/vector_lock.cpp)
+add_test(vector_lock harness ./vector_lock)
+
 add_executable(dangling_ref_vector_raw src/tests/dangling_ref_vector_raw.cpp)
 add_test(dangling_ref_vector_raw harness ./dangling_ref_vector_raw)
 
@@ -67,3 +73,5 @@ add_test(iterator_erase iterator_erase)
 add_executable(observer_simple src/tests/observer_simple.cpp)
 add_test(observer_simple ./observer_simple)
 
+add_executable(vector_iterate src/tests/vector_iterate.cpp)
+add_test(vector_iterate ./vector_iterate)

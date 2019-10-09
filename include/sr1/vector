@@ -18,7 +18,7 @@ namespace sr1
 #ifdef STD_SR1_DEBUG
 
 template <typename T>
-class vector : public enable_observer
+class vector
 {
   std::vector<T> data;
   size_t refs;
@@ -27,7 +27,7 @@ class vector : public enable_observer
   {
     if(refs > 0)
     {
-      std::cerr << "Attempting to delete active memory" << std::endl;
+      std::cerr << "Attempting to delete active memory residing in vector" << std::endl;
       abort();
     }
   }
@@ -36,7 +36,7 @@ class vector : public enable_observer
   {
     friend class vector;
 
-    vector* owner;
+    zero_initialized<vector*> owner;
     size_t idx;
 
     vector_lock() : owner(NULL), idx(0) {}
@@ -59,7 +59,7 @@ class vector : public enable_observer
     {
       if(owner)
       {
-        owner->refs--;
+        owner.data()->refs--;
       }
     }
   };
@@ -103,7 +103,7 @@ public:
     friend class vector;
 
     typename std::vector<T>::iterator it;
-    observer_ptr<vector<T> > parent;
+    zero_initialized<vector<T>*> parent;
 
     void check_parent() const
     {
@@ -118,7 +118,7 @@ public:
     {
       check_parent();
 
-      if(it == parent->data.end())
+      if(it == parent.data()->data.end())
       {
         std::cerr << "Invalid iterator" << std::endl;
         abort();
@@ -130,31 +130,31 @@ public:
 
     iterator(iterator const& other)
     {
-      *this = other;
+      operator=(other);
     }
 
     ~iterator()
     {
       if(parent)
       {
-        parent->refs--;
+        parent.data()->refs--;
       }
     }
 
     iterator& operator=(iterator const& other)
     {
+      if(other.parent)
+      {
+        other.parent.data()->refs++;
+      }
+
       if(parent)
       {
-        parent->refs--;
+        parent.data()->refs--;
       }
 
       it = other.it;
       parent = other.parent;
-
-      if(parent)
-      {
-        parent->refs++;
-      }
 
       return *this;
     }
@@ -206,7 +206,8 @@ public:
 
     bool operator==(const iterator& other)
     {
-      return it == other.it;
+      //return it == other.it;
+      return !operator!=(other);
     }
   };
 
@@ -253,9 +254,11 @@ public:
 
   iterator erase(iterator& it)
   {
-    it.check_valid();
+    // Undefined to write to var.
+    //iterator& it = const_cast<iterator&>(cit);
 
-    it.parent.reset();
+    it.check_valid();
+    it.parent = NULL;
 
     refs--;
     check_valid();

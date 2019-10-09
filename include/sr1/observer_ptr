@@ -163,6 +163,7 @@ struct observer_ptr
     return *ptr.lock();
   }
 
+#ifdef STD_SR1_DEBUG
   /*********************************************************
    * ->
    *
@@ -179,11 +180,20 @@ struct observer_ptr
     return shared_ptr_lock_ptr<T>(ptr.ref);
   }
 
+  /*********************************************************
+   * ->
+   *
+   * Allows for dereference [var->]. Disabled because there
+   * is no way to control the lifespan duration of certain
+   * objects.
+   *********************************************************/
   //shared_ptr<T> operator->() const
   //{
   //  return ptr.lock();
   //}
+#endif
 
+#ifndef STD_SR1_DEBUG
   /*********************************************************
    * ->
    *
@@ -191,10 +201,11 @@ struct observer_ptr
    * because it simply returns a raw pointer. It does not
    * do the lifetime locking allowing for dangling "this".
    *********************************************************/
-  //T* operator->() const
-  //{
-  //  return get();
-  //}
+  T* operator->() const
+  {
+    return get();
+  }
+#endif
 
   template <typename R>
   void reset(const std::unique_ptr<R>& r)
