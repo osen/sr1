@@ -47,6 +47,9 @@ add_test(vector_resize harness ./vector_resize)
 add_executable(vector_lock src/tests/vector_lock.cpp)
 add_test(vector_lock harness ./vector_lock)
 
+add_executable(vector_erase_end src/tests/vector_erase_end.cpp)
+add_test(vector_erase_end harness ./vector_erase_end)
+
 add_executable(dangling_ref_vector_raw src/tests/dangling_ref_vector_raw.cpp)
 add_test(dangling_ref_vector_raw harness ./dangling_ref_vector_raw)
 

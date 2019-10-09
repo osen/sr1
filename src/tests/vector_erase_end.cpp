@@ -24,7 +24,7 @@ int main()
 
   while(foos.size() > 0)
   {
-    foos.erase(foos.begin());
+    foos.erase(foos.end());
   }
 
   return 0;

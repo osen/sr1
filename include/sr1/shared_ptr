@@ -195,14 +195,32 @@ public:
 
   shared_ptr_lock_ptr<T> operator->() const
   {
-    //return shared_ptr_lock_ptr<T>(const_cast<shared_ptr_refcount*>(ref));
     return shared_ptr_lock_ptr<T>(ref);
   }
 
   shared_ptr_lock_ref<T> operator*() const
   {
-    //return shared_ptr_lock_ref<T>(const_cast<shared_ptr_refcount*>(ref));
     return shared_ptr_lock_ref<T>(ref);
+  }
+
+  /*********************************************************
+   * bool
+   *
+   * Allows for initialized check [if(var)].
+   *********************************************************/
+  operator bool() const
+  {
+    return !operator!();
+  }
+
+  /*********************************************************
+   * !
+   *
+   * Allows for not initialized check [if(!var)].
+   *********************************************************/
+  bool operator!() const
+  {
+    return get() == NULL;
   }
 
   //mutable zero_initialized<shared_ptr_refcount*> ref;

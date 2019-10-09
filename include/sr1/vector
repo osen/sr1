@@ -23,7 +23,7 @@ class vector
   std::vector<T> data;
   size_t refs;
 
-  void check_valid()
+  void check_valid() const
   {
     if(refs > 0)
     {
@@ -97,13 +97,12 @@ public:
     return data.size();
   }
 
-
   class iterator
   {
     friend class vector;
 
-    typename std::vector<T>::iterator it;
-    zero_initialized<vector<T>*> parent;
+    mutable typename std::vector<T>::iterator it;
+    mutable zero_initialized<vector<T>*> parent;
 
     void check_parent() const
     {
@@ -114,7 +113,7 @@ public:
       }
     }
 
-    void check_valid()
+    void check_valid() const
     {
       check_parent();
 
@@ -128,7 +127,7 @@ public:
   public:
     iterator() { }
 
-    iterator(iterator const& other)
+    iterator(const iterator& other)
     {
       operator=(other);
     }
@@ -141,7 +140,7 @@ public:
       }
     }
 
-    iterator& operator=(iterator const& other)
+    iterator& operator=(const iterator& other)
     {
       if(other.parent)
       {
@@ -159,7 +158,7 @@ public:
       return *this;
     }
 
-    bool operator!=(iterator const& other)
+    bool operator!=(const iterator& other)
     {
       check_parent();
       other.check_parent();
@@ -252,11 +251,8 @@ public:
     return rtn;
   }
 
-  iterator erase(iterator& it)
+  iterator erase(const iterator& it)
   {
-    // Undefined to write to var.
-    //iterator& it = const_cast<iterator&>(cit);
-
     it.check_valid();
     it.parent = NULL;
 
