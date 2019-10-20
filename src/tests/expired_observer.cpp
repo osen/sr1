@@ -9,6 +9,8 @@ struct Foo : public std::sr1::enable_observer
   void someFunc()
   {
     a = 9;
+
+    std::cout << "Func ran! " << a << std::endl;
   }
 
 };

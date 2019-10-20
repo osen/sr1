@@ -50,8 +50,12 @@ struct zero_initialized
 */
 
 private:
+#ifdef STD_SR1_DEBUG
   template <typename U>
   friend class shared_ptr;
+
+  template <typename U>
+  friend class weak_ptr;
 
   template <typename U>
   friend class shared_ptr_lock_ref;
@@ -62,7 +66,6 @@ private:
   template <typename U>
   friend class shared_ptr_lock_ptr;
 
-#ifdef STD_SR1_DEBUG
   template <typename U>
   friend class vector;
 #endif

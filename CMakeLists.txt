@@ -78,3 +78,6 @@ add_test(observer_simple ./observer_simple)
 
 add_executable(vector_iterate src/tests/vector_iterate.cpp)
 add_test(vector_iterate ./vector_iterate)
+
+add_executable(observer_casting src/tests/observer_casting.cpp)
+add_test(observer_casting ./observer_casting)

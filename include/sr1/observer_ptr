@@ -13,7 +13,26 @@ namespace sr1
 {
 
 template <typename T>
-struct _enable_observer;
+struct _enable_observer
+{
+  _enable_observer()
+  {
+    _self.reset(this, dummy);
+  }
+
+  virtual ~_enable_observer() { }
+
+private:
+  template <typename R>
+  friend struct observer_ptr;
+
+  static void dummy(_enable_observer* ptr) { }
+
+  shared_ptr<_enable_observer> _self;
+
+};
+
+using enable_observer = _enable_observer<int>;
 
 template <typename T>
 struct observer_ptr
@@ -81,8 +100,9 @@ struct observer_ptr
    *
    * Allows for a copy assignment.
    *********************************************************/
-  observer_ptr& operator=(const observer_ptr<T>& t)
+  observer_ptr& operator=(const observer_ptr& t)
   {
+    //ptr = t.ptr;
     reset(t);
 
     return *this;
@@ -96,6 +116,7 @@ struct observer_ptr
   template <typename R>
   observer_ptr& operator=(const observer_ptr<R>& r)
   {
+    //ptr = r.ptr;
     reset(r);
 
     return *this;
@@ -160,6 +181,7 @@ struct observer_ptr
    *********************************************************/
   T& operator*() const
   {
+    // TODO: Should this do the lock check?
     return *ptr.lock();
   }
 
@@ -176,8 +198,7 @@ struct observer_ptr
    *********************************************************/
   shared_ptr_lock_ptr<T> operator->() const
   {
-    //return shared_ptr_lock_ptr<T>(ptr.lock().ref);
-    return shared_ptr_lock_ptr<T>(ptr.ref);
+    return shared_ptr_lock_ptr<T>(ptr.ptr, ptr.ref);
   }
 
   /*********************************************************
@@ -216,25 +237,27 @@ struct observer_ptr
   template <typename R>
   void reset(const weak_ptr<R>& r)
   {
-    reset(r.lock());
+    //reset(r.lock());
+    ptr = r;
   }
 
   template <typename R>
   void reset(const shared_ptr<R>& r)
   {
-    reset(r.get());
+    ptr = r;
   }
 
   template <typename R>
   void reset(const observer_ptr<R>& r)
   {
-    reset(r.get());
+    ptr = r.ptr;
   }
 
   template <typename R>
   void reset(R* r)
   {
-    ptr = static_pointer_cast<R>(r->self);
+    //ptr = static_pointer_cast<R>(r->_self);
+    ptr = dynamic_pointer_cast<R>(r->_self);
   }
 
   void reset()
@@ -282,43 +305,24 @@ struct observer_ptr
     return get() != other.get();
   }
 
-private:
-  template <typename R>
-  friend struct observer_ptr;
-
-  weak_ptr<T> ptr;
-
   /*********************************************************
    * get
    *
    * Provides a way to recover the pointer.
+   * TODO: Consider making this private to avoid use.
    *********************************************************/
   T* get() const
   {
     return ptr.lock().get();
   }
 
-};
-
-template <typename T>
-struct _enable_observer
-{
-  _enable_observer()
-  {
-    self.reset(this, dummy);
-  }
-
 private:
   template <typename R>
   friend struct observer_ptr;
 
-  static void dummy(_enable_observer* ptr) { }
-
-  shared_ptr<_enable_observer> self;
+  weak_ptr<T> ptr;
 
 };
-
-using enable_observer = _enable_observer<int>;
 
 }
 

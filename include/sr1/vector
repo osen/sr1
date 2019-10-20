@@ -21,7 +21,7 @@ template <typename T>
 class vector
 {
   std::vector<T> data;
-  size_t refs;
+  mutable size_t refs;
 
   void check_valid() const
   {
@@ -36,7 +36,7 @@ class vector
   {
     friend class vector;
 
-    zero_initialized<vector*> owner;
+    zero_initialized<const vector*> owner;
     size_t idx;
 
     vector_lock() : owner(NULL), idx(0) {}
@@ -46,7 +46,7 @@ class vector
       return idx;
     }
 
-    void setOwner(vector* owner)
+    void setOwner(const vector* owner)
     {
       this->owner = owner;
       owner->refs++;
@@ -66,6 +66,7 @@ class vector
 
 public:
   vector() : refs(0) { }
+  vector(size_t size) : refs(0), data(size) { }
 
   ~vector()
   {
@@ -84,6 +85,12 @@ public:
   {
     check_valid();
     data.push_back(val);
+  }
+
+  void resize(size_t size)
+  {
+    check_valid();
+    data.resize(size);
   }
 
   void clear()
@@ -209,6 +216,13 @@ public:
       return !operator!=(other);
     }
   };
+
+  // Query version. To read from const reference.
+  const T& at(size_t idx, vector_lock vl = vector_lock()) const
+  {
+    vl.setOwner(this);
+    return data.at(idx);
+  }
 
   T& at(size_t idx, vector_lock vl = vector_lock())
   {
